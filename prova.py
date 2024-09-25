@@ -1,4 +1,5 @@
 from astrapy import DataAPIClient
+import datetime
 
 
 def db():
@@ -97,17 +98,48 @@ def devolucao():
         {"$set": {"Status": "Devolução Realizada", "DevolucaoRealizada": devolucaoItem}}
     )
 
+def listar_livros():
+
+    db = db()
+
+    collection = db.livros
+
+    for livro in collection.find():
+        print(livro)
+
+def listar_emprestimos():
+
+    db = db()
+
+    collection = db.emprestimo
+
+    documento = input("Digite o documento do cliente: ")
+
+
+    for livro in collection.find({"documento": documento}):
+        print(livro)
+
 
 # collection = db.clientes
+
+# db = db()
+
+# collection = db.emprestimo
+# # print("Tabela 'musicas' criada com sucesso!")
+
+# # Inserir uma nova música
+# replaced_musica = collection.find_one_and_replace(
+#     {"_id": "1b40be54-fa44-462b-80be-54fa44162bae"},
+#     {"id": "1", "documento": "Nova Música", "tituloLivro": "dataEmprestimo", "dataDevolucao": "Novo Gênero", "Status": "Pendente", "DevolucaoRealizada": ""}
+# )
+# print("Música substituída:", replaced_musica)
 
 db = db()
 
 collection = db.emprestimo
-# print("Tabela 'musicas' criada com sucesso!")
 
-# Inserir uma nova música
-replaced_musica = collection.find_one_and_replace(
-    {"_id": "1b40be54-fa44-462b-80be-54fa44162bae"},
-    {"id": "1", "documento": "Nova Música", "tituloLivro": "dataEmprestimo", "dataDevolucao": "Novo Gênero", "Status": "Pendente", "DevolucaoRealizada": ""}
-)
-print("Música substituída:", replaced_musica)
+documento = input("Digite o documento do cliente: ")
+
+
+for livro in collection.find({"documento": documento}):
+    print(livro)
