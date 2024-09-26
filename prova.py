@@ -3,40 +3,69 @@ from datetime import datetime
 import time
 from tabulate import tabulate
 
+#Função para entrar no database e retorna a datava para ser utilizada pelo código
 def entrar_db():
-    # Initialize the client
     client = DataAPIClient("AstraCS:kOCujDWZAGtWRICfnUTliKpn:c640f1d1b51ae5b958a2b8ac3e5541c24452916e99aa02a9d579a2d356571ba0")
     db = client.get_database_by_api_endpoint(
     "https://4e652219-3dce-4395-bc8d-38465b7fc0b3-us-east1.apps.astra.datastax.com"
     )
 
     print(f"Connected to Astra DB: {db.list_collection_names()}")
-
     return db
 
+#apenas ma função para validar que a data está no formato correto
 def formatar_data(data_str):
     while True:
         try:
-            # Formato esperado: dd/mm/yyyy
             data_formatada = datetime.strptime(data_str, "%d/%m/%Y")
             return data_formatada
         except ValueError:
             print("Data inválida. O formato deve ser dd/mm/yyyy.")
             data_str = input("Digite a data novamente (dd/mm/yyyy): ")
 
-
+#função para cadastrar os livros
 def cadastroLivros():
+    #entra na database
     db = entrar_db()
 
+    #seleciona a "tabela", livros
     collection = db.livros
 
     titulo = input("Digite o Título do Livro que deseja inserir no Estoque: ")
     autor = input("Digite o autor do Livro: ")
     genero = input("Digite o genero do Livro: ")
-    ano = int(input("Digite o Ano de Lançamento do Livro: "))
-    isbn = int(input("Digite o ISBN do Livro: "))
-    quantidade = int(input("Digite a quantidade de Livros no Estoque: "))
+    
+    # Verificação para o ano
+    while True:
+        try:
+            ano = int(input("Digite o Ano de Lançamento do Livro: "))
+            if ano <= 0:
+                raise ValueError("O ano deve ser um número positivo.")
+            break
+        except ValueError as e:
+            print(f"Entrada inválida: {e}. Tente novamente.")
 
+    # Verificação para ISBN
+    while True:
+        try:
+            isbn = int(input("Digite o ISBN do Livro: "))
+            if isbn <= 0:
+                raise ValueError("O ISBN deve ser um número positivo.")
+            break
+        except ValueError as e:
+            print(f"Entrada inválida: {e}. Tente novamente.")
+
+    # Verificação para quantidade
+    while True:
+        try:
+            quantidade = int(input("Digite a quantidade de Livros no Estoque: "))
+            if quantidade < 0:
+                raise ValueError("A quantidade não pode ser negativa.")
+            break
+        except ValueError as e:
+            print(f"Entrada inválida: {e}. Tente novamente.")
+
+    #transformando no formato de um documento JSON
     livro = {
         "titulo": titulo,
         "autor": autor,
@@ -46,13 +75,13 @@ def cadastroLivros():
         "quantidade": quantidade,
     }
 
+    #inserir o livro na "tabela"
     collection.insert_one(livro)
     print("Livro adicionado com sucesso")
 
+#Funçao para cadastrar o cliente
 def cadastroCliente():
-
     db = entrar_db()
-
     collection = db.clientes
 
     nome = input("Digite o Nome do Cliente que deseja inserir no Sistema: ")
@@ -62,7 +91,6 @@ def cadastroCliente():
     nascimento = formatar_data(nascimento_str)
 
     documento = input("Digite o documento do cliente: ")
- 
 
     cliente = {
         "nome": nome,
@@ -71,29 +99,35 @@ def cadastroCliente():
         "documento": documento,
     }
 
+    #inserir na tabela "clientes"
     collection.insert_one(cliente)
+
     print("Cliente cadastrado com sucesso!")
 
-
+#função para realizar o emprestimo do livro
 def emprestimo():
     db = entrar_db()
+    collection_emprestimo = db.emprestimo
 
-    while True:  # Loop contínuo até a finalização ou cancelamento
+    #loop para caso de algo errado
+    while True:
         try:
-            # Coleção de empréstimos
-            collection_emprestimo = db.emprestimo
-
-            # Entrada de dados
             documento = input("Digite o documento do cliente: ")
             tituloLivro = input("Digite o título do Livro: ")
 
             dataEmprestimo_str = input("Digite a data da retirada do Livro (dd/mm/aaaa): ")
+
+            #Chamando o formatar_data para formatar a data KKKKKKKKKK
             dataEmprestimo = formatar_data(dataEmprestimo_str)
 
             dataDevolucao_str = input("Digite a data prevista para a devolução do Livro (dd/mm/aaaa): ")
             dataDevolucao = formatar_data(dataDevolucao_str)
 
-            # Dados do empréstimo
+            # Verificação para garantir que a data de devolução seja posterior à data de empréstimo
+            if dataDevolucao <= dataEmprestimo:
+                print("A data de devolução deve ser posterior à data de empréstimo.")
+                continue
+
             emprestimo = {
                 "documento": documento,
                 "tituloLivro": tituloLivro,
@@ -103,34 +137,30 @@ def emprestimo():
                 "DevolucaoRealizada": ""
             }
 
-            # Insere o empréstimo na coleção
             collection_emprestimo.insert_one(emprestimo)
 
-            # Coleção de livros
+            
             collection_livros = db.livros
 
-            # Busca o livro pelo título
             livro = collection_livros.find_one({"titulo": tituloLivro})
-
+            #codigo para alterar a quantidade de livros na tabela livros
             if livro:
-                # Verifica a quantidade atual
                 quantidade_atual = int(livro.get("quantidade", 0))
 
                 if quantidade_atual > 0:
-                    # Atualiza a quantidade, subtraindo 1
                     nova_quantidade = quantidade_atual - 1
                     collection_livros.update_one(
                         {"titulo": tituloLivro}, 
                         {"$set": {"quantidade": nova_quantidade}}
                     )
                     print(f"Empréstimo realizado com sucesso! Quantidade atual de '{tituloLivro}': {nova_quantidade}")
+                #VERIFICAÇÕES PARA CASO DE ALGO ERRADO
                 else:
                     print(f"Não há exemplares disponíveis para o livro '{tituloLivro}'.")
             else:
                 print(f"Livro '{tituloLivro}' não encontrado no banco de dados.")
 
-
-            break  # Sai do loop após o sucesso
+            break
 
         except ValueError:
             print("\nEntrada inválida! Certifique-se de inserir os dados corretamente.")
@@ -138,54 +168,56 @@ def emprestimo():
         except Exception as e:
             print(f"\nOcorreu um erro: {e}")
 
-        # Oferece uma opção para tentar novamente ou sair
+        #Caso de algo errado abrirá um input perguntando para ver se o usuario ainda quer fazer a operação
         opcao = input("\nDeseja tentar novamente? (s/n): ").lower()
         if opcao != 's':
             print("Operação de empréstimo cancelada.")
             break
 
+#função para devolução de um livro emprestado
 def devolucao():
+
     db = entrar_db()
     collection = db.emprestimo
 
-    documento = int(input("Digite o número do documento do cliente: "))
+    documento = input("Digite o número do documento do cliente: ")
     devolucaoItem_str = input("Digite a data de devolução do livro (dd/mm/aaaa): ")
     devolucaoItem = formatar_data(devolucaoItem_str)
 
+    #código para achar a linha requisitada com base no documento do cliente
     devolucao = collection.find_one({"documento": documento})
 
     if devolucao is None:
         print("Documento não encontrado.")
-        return  # Adiciona um retorno caso o documento não seja encontrado
+        return 
 
+    #codigo para pegar o titulo do livro em questão para realizar a alteração de quantidade
     tituloLivro = devolucao.get("tituloLivro")
 
+    #mudando o Status do emprestimo e colocando a data que a devolução foi feita
     collection.update_one(
         {"documento": documento},
         {"$set": {"Status": "Devolução Realizada", "DevolucaoRealizada": devolucaoItem}}
     )
 
-    # Coleção de livros
+    #código para realizar a atualizaçao de quantidade
     collection_livros = db.livros
-
-    # Busca o livro pelo título
     livro = collection_livros.find_one({"titulo": tituloLivro})
 
     if livro is None:
         print("Livro não encontrado.")
-        return  # Retorna se o livro não for encontrado
+        return 
 
-    # Verifica a quantidade atual
     quantidade_atual = livro.get("quantidade", 0)
 
-    # Tenta converter a quantidade para inteiro
+    #validações
     try:
         quantidade_atual = int(quantidade_atual)
     except ValueError:
         print("Erro ao converter a quantidade para um número inteiro.")
-        return  # Retorna em caso de erro na conversão
+        return 
 
-    # Atualiza a quantidade, subtraindo 1
+    #atualizando em um pois só pode emprestar um livro por livro
     nova_quantidade = quantidade_atual + 1
     collection_livros.update_one(
         {"titulo": tituloLivro}, 
@@ -193,42 +225,29 @@ def devolucao():
     )
     print(f"Devolução realizada com sucesso! Quantidade atual de '{tituloLivro}': {nova_quantidade}")
 
-
-
-
+#função para imprimir na tela os livros cadastrados
 def listar_livros():
     db = entrar_db()
-
     collection = db.livros
 
-    # Lista para armazenar os livros
+    #utilizando lista para facilitar na tabulaçao
     livros = []
 
-    # Itera sobre cada livro na coleção e adiciona os dados à lista
     for livro in collection.find():
         livros.append(livro)
 
     if livros:
-        # Pega todas as chaves (headers) dos documentos (campos dos livros)
+        #usando a bilbioteca tabulate para imprimir na tela em formato de tabela para melhor compreensão do usuario
         headers = list(livros[0].keys())
-        
-        # Cria uma tabela com os valores correspondentes aos headers para cada livro
         tabela = [[livro.get(h, 'N/A') for h in headers[1:]] for livro in livros]
-        
-        # Exibe a tabela com os headers dinâmicos
         print(tabulate(tabela, headers=headers[1:], tablefmt="grid"))
         print("\n\n")
-
     else:
         print("Nenhum livro encontrado.")
 
-
-
-
+#código para listar os emprestimos em um determinado periodo
 def listar_emprestimos():
-
     db = entrar_db()
-
     collection = db.emprestimo
 
     data_inicio_str = input("Digite a data inicial para o filtro (dd/mm/aaaa): ")
@@ -237,123 +256,66 @@ def listar_emprestimos():
     data_fim_str = input("Digite a data final para o filtro (dd/mm/aaaa): ")
     data_fim = formatar_data(data_fim_str)
 
-    for livro in collection.find({"dataEmprestimo":{"$gte": data_inicio, "$lte": data_fim}
-                                  }):
+    #achar os emprestimo com base nos parametros especificos
+    emprestimos = collection.find({"dataEmprestimo":{"$gte": data_inicio, "$lte": data_fim}})
+
+    #Validação para que o filtro não printa nada na tela e sim um aviso    
+    if emprestimos.count() == 0:
+        print("Nenhum empréstimo encontrado no período especificado.")
+        return
+
+    for livro in emprestimos:
         print(livro)
 
-
+#função para listar os clientes
 def listar_clientes():
-
     db = entrar_db()
-
     collection = db.clientes
-    # Lista para armazenar os livros
-    livros = []
+    clientes = []
 
-    # Itera sobre cada livro na coleção e adiciona os dados à lista
-    for livro in collection.find():
-        livros.append(livro)
+    for cliente in collection.find():
+        clientes.append(cliente)
 
-    if livros:
-        # Pega todas as chaves (headers) dos documentos (campos dos livros)
-        headers = list(livros[0].keys())
-        
-        # Cria uma tabela com os valores correspondentes aos headers para cada livro
-        tabela = [[livro.get(h, 'N/A') for h in headers[1:]] for livro in livros]
-        
-        # Exibe a tabela com os headers dinâmicos
+    #código para formatar como uma tabela
+    if clientes:
+        headers = list(clientes[0].keys())
+        tabela = [[cliente.get(h, 'N/A') for h in headers[1:]] for cliente in clientes]
         print(tabulate(tabela, headers=headers[1:], tablefmt="grid"))
-        print("\n\n")
     else:
         print("Nenhum cliente encontrado.")
 
-
-def usuarios_com_emprestimos_vencidos():
-    db = entrar_db()
-    collection = db.emprestimo
-
-    # Obtendo a data atual no formato correto
-    data_atual = datetime.now()
-
-    # Filtrando empréstimos vencidos
-    emprestimos_vencidos = collection.find({
-        "dataDevolucao": {"$lt": data_atual},  # Verifica se a data de devolução é menor que a data atual
-        "Status": {"$ne": "Devolução Realizada"}  # Exclui empréstimos que já foram devolvidos
-    })
-
-    print("Usuários com empréstimos vencidos:")
-    for emprestimo in emprestimos_vencidos:
-        # Acessando os dados do empréstimo e formatando a saída
-        print(f"Cliente: {emprestimo['documento']}, Livro: {emprestimo['tituloLivro']}, "
-              f"Data Devolução Prevista: {emprestimo['dataDevolucao'].strftime('%d/%m/%Y')}, "
-              f"Status: {emprestimo['Status']}")
-
-def deletar_info():
-    client = entrar_db()
-
-    tabela = input("Digite qual a tabela que queira deletar (livros, clientes ou emprestimo): ").lower()
-
-    tipoDado = input("Digite o filtro para o que deletar (documento ou titulo): ").lower()
-    dado = input("Agora digite o valor que deseja deletar: ")
-
-    # Seleciona a coleção/tabela correta
-    collection = client.get_collection(tabela)
-
-    # Realiza a operação de deleção
-    collection.delete_one({tipoDado: dado})  # `dado` precisa ser o ID do documento
-
-    print(f"Registro com {tipoDado}: {dado} deletado com sucesso!")
-
+# Adicionando uma opção de saída
 def menu():
-
-    print("Bem-vindo ao Sistema da Biblioteca\n\n\n")
-
     while True:
+        print("Menu:")
+        print("1. Cadastro de Livros")
+        print("2. Cadastro de Clientes")
+        print("3. Empréstimo de Livros")
+        print("4. Devolução de Livros")
+        print("5. Listar Livros")
+        print("6. Listar Empréstimos")
+        print("7. Listar Clientes")
+        print("0. Sair")
+        opcao = input("Escolha uma opção: ")
 
-        print("1. Cadastro de Livro")
-        print("2. Cadastro Cliente")
-        print("3. Realizar um Empréstimo")
-        print("4. Realizar uma Devolução")
-        print("5. Relatório de Livros")
-        print("6. Relatório de Clientes")
-        print("7. Relatório de Empréstimos")
-        print("8. Excluir Informações")
-        print("9. Clientes com Empréstimos Vencidos")
-        print("10. Sair\n\n")
-
-        try:
-            escolha = int(input("Escolha uma das opções acima: "))
-        except ValueError:
-            print("\n\nEntrada inválida! Por favor, digite um número.")
-            time.sleep(2)  
-            continue  # Continua no loop, exibindo o menu novamente
-
-        if escolha == 1:
+        if opcao == '1':
             cadastroLivros()
-        elif escolha == 2:
+        elif opcao == '2':
             cadastroCliente()
-        elif escolha == 3:
+        elif opcao == '3':
             emprestimo()
-        elif escolha == 4:
+        elif opcao == '4':
             devolucao()
-        elif escolha == 5:
+        elif opcao == '5':
             listar_livros()
-        elif escolha == 6:
-            listar_clientes()
-        elif escolha == 7:
+        elif opcao == '6':
             listar_emprestimos()
-        elif escolha == 8:
-            deletar_info()
-        elif escolha == 9:
-            usuarios_com_emprestimos_vencidos()
-        elif escolha == 10:
+        elif opcao == '7':
+            listar_clientes()
+        elif opcao == '0':
             print("Saindo do sistema.")
-            break 
+            break
         else:
-            print("\n\nResposta inválida! Digite uma resposta válida!\n\n")
-            time.sleep(2)
-
-        time.sleep(2) 
-
+            print("Opção inválida. Tente novamente.")
 
 menu()
