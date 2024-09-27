@@ -11,30 +11,30 @@ essas informações em um banco de dados não relacional Cassandra sendo um banc
 
 Quando executado o código, através das opções:
 
-Digitando 1 para Cadastro de Livros:
+  Digitando 1 para Cadastro de Livros:
 Permite cadastrar um livro com as informações como título, autor, gênero, ano de publicação, ISBN e quantidade de exemplares disponíveis
 
 
-Digitando 2 para Cadastro de Clientes:
+  Digitando 2 para Cadastro de Clientes:
 Permite o cadastro de usuários com nome, e-mail, data de nascimento e número de documento.
 
 
-Digitando 3	para Empréstimo de Livros:
+  Digitando 3	para Empréstimo de Livros:
 Ao solicitar um empréstimo, o sistema verificará a disponibilidade do livro e registrará a operação, associando-o ao usuário e atualizando a quantidade de exemplares disponíveis. 
 As datas de empréstimo e previsão de devolução também serão registradas.
 
 
-Digitando 4	para Devoluções: 
+  Digitando 4	para Devoluções: 
 Ao devolver um livro, o sistema atualizará a quantidade de exemplares disponíveis e registrará a data da devolução.
 
 
-Digitando 5 para Listar Livros:
+  Digitando 5 para Listar Livros:
 lista livros disponíveis,
 
-Digitando 6 para Listar Empréstimos:
-consultar os empréstimos de um usuário específico e verificar quais usuários possuem empréstimos
+  Digitando 6 para Listar Empréstimos:
+consultar os empréstimos possibilitando verificar quais usuários possuem empréstimos
 
-Digitando 7 para Listar Clientes:
+  Digitando 7 para Listar Clientes:
 Listar Clientes
 
-Digitando 0 - Para sair
+  Digitando 0 - Para sair
