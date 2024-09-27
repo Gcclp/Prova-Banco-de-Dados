@@ -13,7 +13,7 @@ def entrar_db():
     print(f"Connected to Astra DB: {db.list_collection_names()}")
     return db
 
-#apenas ma função para validar que a data está no formato correto
+#apenas uma função para validar que a data está no formato correto
 def formatar_data(data_str):
     while True:
         try:
